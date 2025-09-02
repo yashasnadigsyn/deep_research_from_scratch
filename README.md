@@ -48,29 +48,37 @@ cd deep_research_from_scratch
 uv sync
 ```
 
-3. Create a `.env` file in the project root with your API keys:
+3. Set up Ollama (required for local AI processing):
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull the required model
+ollama pull qwen3:0.6b-q8_0
+```
+
+4. Create a `.env` file in the project root (optional for tracing):
 ```bash
 # Create .env file
 touch .env
 ```
 
-Add your API keys to the `.env` file:
+Add your API keys to the `.env` file (optional):
 ```env
-# Required for research agents with external search
-TAVILY_API_KEY=your_tavily_api_key_here
-
-# Required for model usage
-OPENAI_API_KEY=your_openai_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-
 # Optional: For evaluation and tracing
 LANGSMITH_API_KEY=your_langsmith_api_key_here
 LANGSMITH_TRACING=true
 LANGSMITH_PROJECT=deep_research_from_scratch
 ```
 
-4. Run notebooks or code using uv:
+5. Run the deep research agent:
 ```bash
+# Interactive mode
+uv run python main.py
+
+# Command line mode
+uv run python main.py "What are the best coffee shops in San Francisco?"
+
 # Run Jupyter notebooks directly
 uv run jupyter notebook
 
@@ -79,9 +87,74 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 jupyter notebook
 ```
 
+## 📊 Logging
+
+The system includes comprehensive logging for debugging and monitoring:
+
+- **Log Files**: Automatically created in `logs/` directory with timestamps
+- **Console Output**: Real-time logging to console during execution
+- **Module-Specific Loggers**: Separate loggers for different components
+- **Configurable Levels**: DEBUG, INFO, WARNING, ERROR levels available
+
+### Log Files
+
+Log files are automatically created in the `logs/` directory with timestamps:
+```
+logs/
+├── deep_research_20250101_120000.log
+├── deep_research_20250101_130000.log
+└── ...
+```
+
+### Log Levels
+
+- **INFO**: General information about research progress
+- **DEBUG**: Detailed debugging information (tool calls, state transitions)
+- **WARNING**: Non-critical issues
+- **ERROR**: Errors and exceptions with full stack traces
+
+### Example Log Output
+
+```
+2025-01-01 12:00:00 - deep_research - INFO - Starting research session for query: What are the best coffee shops in San Francisco?
+2025-01-01 12:00:01 - deep_research.scope - INFO - Starting user clarification process
+2025-01-01 12:00:02 - deep_research.scope - INFO - Sufficient information provided - proceeding to research brief generation
+2025-01-01 12:00:03 - deep_research.supervisor - INFO - Supervisor node executing - iteration 1
+2025-01-01 12:00:04 - deep_research.utils - INFO - DDGS search tool called with query: 'best coffee shops San Francisco', max_results: 3
+2025-01-01 12:00:05 - deep_research.research_agent - INFO - LLM made 2 tool calls: ['ddgs_search', 'think_tool']
+```
+
+## 🚀 Quick Start with main.py
+
+The easiest way to use the deep research agent is through the `main.py` script:
+
+```bash
+# Interactive mode - ask multiple questions
+uv run python main.py
+
+# Command line mode - single question
+uv run python main.py "What are the best coffee shops in San Francisco?"
+uv run python main.py "Compare OpenAI vs Anthropic AI approaches"
+uv run python main.py "What are the latest developments in quantum computing?"
+```
+
+The agent will:
+1. **Clarify** your question if needed
+2. **Research** using web search and multi-agent coordination
+3. **Generate** a comprehensive report with sources
+
+## 🔧 Key Features
+
+- **Local AI Processing**: Uses Ollama with Qwen3 model for all AI operations
+- **DDGS Search**: Uses Dux Distributed Global Search for web research
+- **Multi-Agent Coordination**: Intelligent task delegation for complex research
+- **No External APIs**: Runs completely locally (except for web search)
+- **Rich Output**: Beautiful formatted reports with proper citations
+- **Comprehensive Logging**: Detailed logging for debugging and monitoring
+
 ## Background 
 
-Research is an open‑ended task; the best strategy to answer a user request can’t be easily known in advance. Requests can require different research strategies and varying levels of search depth. Consider this request. 
+Research is an open‑ended task; the best strategy to answer a user request can't be easily known in advance. Requests can require different research strategies and varying levels of search depth. Consider this request. 
 
 [Agents](https://langchain-ai.github.io/langgraph/tutorials/workflows/#agent) are well suited to research because they can flexibly apply different strategies, using intermediate results to guide their exploration. Open deep research uses an agent to conduct research as part of a three step process:
 
@@ -120,7 +193,7 @@ This repo contains 5 tutorial notebooks that build a deep research system from s
 **Key Concepts**:
 - **Agent Architecture**: LLM decision node + tool execution node pattern
 - **Sequential Tool Execution**: Reliable synchronous tool execution
-- **Search Integration**: Tavily search with content summarization
+- **Search Integration**: DDGS (Dux Distributed Global Search) with content summarization
 - **Tool Execution**: ReAct-style agent loop with tool calling
 
 **Implementation Highlights**:
@@ -133,22 +206,8 @@ This repo contains 5 tutorial notebooks that build a deep research system from s
 
 ---
 
-#### 3. Research Agent with MCP (`notebooks/3_research_agent_mcp.ipynb`)
-**Purpose**: Integrate Model Context Protocol (MCP) servers as research tools
-
-**Key Concepts**:
-- **Model Context Protocol**: Standardized protocol for AI tool access
-- **MCP Architecture**: Client-server communication via stdio/HTTP
-- **LangChain MCP Adapters**: Seamless integration of MCP servers as LangChain tools
-- **Local vs Remote MCP**: Understanding transport mechanisms
-
-**Implementation Highlights**:
-- `MultiServerMCPClient` for managing MCP servers
-- Configuration-driven server setup (filesystem example)
-- Rich formatting for tool output display
-- Async tool execution required by MCP protocol (no nested event loops needed)
-
-**What You'll Learn**: MCP integration, client-server architecture, protocol-based tool access
+#### 3. Research Agent with MCP (`notebooks/3_research_agent_mcp.ipynb`) - **REMOVED**
+**Note**: This notebook has been removed from the current implementation as MCP functionality is not needed for the core research system.
 
 ---
 

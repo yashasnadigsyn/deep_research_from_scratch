@@ -12,6 +12,7 @@ The system orchestrates the complete research workflow from initial user
 input through final report delivery.
 """
 
+import logging
 from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, START, END
 
@@ -21,10 +22,13 @@ from deep_research_from_scratch.state_scope import AgentState, AgentInputState
 from deep_research_from_scratch.research_agent_scope import clarify_with_user, write_research_brief
 from deep_research_from_scratch.multi_agent_supervisor import supervisor_agent
 
+# Set up logger for this module
+logger = logging.getLogger("deep_research.full_agent")
+
 # ===== Config =====
 
 from langchain.chat_models import init_chat_model
-writer_model = init_chat_model(model="openai:gpt-4.1", max_tokens=32000) # model="anthropic:claude-sonnet-4-20250514", max_tokens=64000
+writer_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0", max_tokens=32000)
 
 # ===== FINAL REPORT GENERATION =====
 
@@ -36,23 +40,43 @@ async def final_report_generation(state: AgentState):
 
     Synthesizes all research findings into a comprehensive final report
     """
-
+    logger.info("Starting final report generation")
+    
     notes = state.get("notes", [])
+    research_brief = state.get("research_brief", "")
+    
+    logger.debug(f"Processing {len(notes)} research notes for final report")
+    logger.debug(f"Research brief length: {len(research_brief)} characters")
 
-    findings = "\n".join(notes)
+    try:
+        findings = "\n".join(notes)
+        logger.debug(f"Combined findings length: {len(findings)} characters")
 
-    final_report_prompt = final_report_generation_prompt.format(
-        research_brief=state.get("research_brief", ""),
-        findings=findings,
-        date=get_today_str()
-    )
+        final_report_prompt = final_report_generation_prompt.format(
+            research_brief=research_brief,
+            findings=findings,
+            date=get_today_str()
+        )
 
-    final_report = await writer_model.ainvoke([HumanMessage(content=final_report_prompt)])
+        logger.debug("Invoking writer model for final report generation")
+        final_report = await writer_model.ainvoke([HumanMessage(content=final_report_prompt)])
 
-    return {
-        "final_report": final_report.content, 
-        "messages": ["Here is the final report: " + final_report.content],
-    }
+        final_report_content = final_report.content
+        logger.info("Final report generated successfully")
+        logger.info(f"Final report length: {len(final_report_content)} characters")
+
+        return {
+            "final_report": final_report_content, 
+            "messages": ["Here is the final report: " + final_report_content],
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in final report generation: {str(e)}", exc_info=True)
+        error_report = f"Error generating final report: {str(e)}"
+        return {
+            "final_report": error_report, 
+            "messages": [error_report],
+        }
 
 # ===== GRAPH CONSTRUCTION =====
 # Build the overall workflow

@@ -5,6 +5,7 @@ This module implements a research agent that can perform iterative web searches
 and synthesis to answer complex research questions.
 """
 
+import logging
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
 
@@ -13,20 +14,23 @@ from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage, fi
 from langchain.chat_models import init_chat_model
 
 from deep_research_from_scratch.state_research import ResearcherState, ResearcherOutputState
-from deep_research_from_scratch.utils import tavily_search, get_today_str, think_tool
+from deep_research_from_scratch.utils import ddgs_search, get_today_str, think_tool
 from deep_research_from_scratch.prompts import research_agent_prompt, compress_research_system_prompt, compress_research_human_message
+
+# Set up logger for this module
+logger = logging.getLogger("deep_research.research_agent")
 
 # ===== CONFIGURATION =====
 
 # Set up tools and model binding
-tools = [tavily_search, think_tool]
+tools = [ddgs_search, think_tool]
 tools_by_name = {tool.name: tool for tool in tools}
 
 # Initialize models
-model = init_chat_model(model="anthropic:claude-sonnet-4-20250514")
+model = init_chat_model(model="ollama:qwen3:0.6b-q8_0")
 model_with_tools = model.bind_tools(tools)
-summarization_model = init_chat_model(model="openai:gpt-4.1-mini")
-compress_model = init_chat_model(model="openai:gpt-4.1", max_tokens=32000) # model="anthropic:claude-sonnet-4-20250514", max_tokens=64000
+summarization_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0")
+compress_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0", max_tokens=32000)
 
 # ===== AGENT NODES =====
 
@@ -39,13 +43,27 @@ def llm_call(state: ResearcherState):
 
     Returns updated state with the model's response.
     """
-    return {
-        "researcher_messages": [
-            model_with_tools.invoke(
-                [SystemMessage(content=research_agent_prompt)] + state["researcher_messages"]
-            )
-        ]
-    }
+    logger.debug("LLM call node executing")
+    logger.debug(f"Current state has {len(state.get('researcher_messages', []))} messages")
+    
+    try:
+        response = model_with_tools.invoke(
+            [SystemMessage(content=research_agent_prompt)] + state["researcher_messages"]
+        )
+        
+        # Log tool calls if any
+        if hasattr(response, 'tool_calls') and response.tool_calls:
+            logger.info(f"LLM made {len(response.tool_calls)} tool calls: {[tc['name'] for tc in response.tool_calls]}")
+        else:
+            logger.info("LLM provided final response without tool calls")
+        
+        return {
+            "researcher_messages": [response]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in LLM call: {str(e)}", exc_info=True)
+        raise
 
 def tool_node(state: ResearcherState):
     """Execute all tool calls from the previous LLM response.
@@ -54,12 +72,22 @@ def tool_node(state: ResearcherState):
     Returns updated state with tool execution results.
     """
     tool_calls = state["researcher_messages"][-1].tool_calls
+    logger.info(f"Tool node executing {len(tool_calls)} tool calls")
 
     # Execute all tool calls
     observations = []
-    for tool_call in tool_calls:
-        tool = tools_by_name[tool_call["name"]]
-        observations.append(tool.invoke(tool_call["args"]))
+    for i, tool_call in enumerate(tool_calls):
+        tool_name = tool_call["name"]
+        logger.debug(f"Executing tool {i+1}/{len(tool_calls)}: {tool_name}")
+        
+        try:
+            tool = tools_by_name[tool_name]
+            observation = tool.invoke(tool_call["args"])
+            observations.append(observation)
+            logger.debug(f"Tool {tool_name} completed successfully")
+        except Exception as e:
+            logger.error(f"Error executing tool {tool_name}: {str(e)}", exc_info=True)
+            observations.append(f"Error executing {tool_name}: {str(e)}")
 
     # Create tool message outputs
     tool_outputs = [
@@ -70,6 +98,7 @@ def tool_node(state: ResearcherState):
         ) for observation, tool_call in zip(observations, tool_calls)
     ]
 
+    logger.info(f"Tool node completed. Generated {len(tool_outputs)} tool messages")
     return {"researcher_messages": tool_outputs}
 
 def compress_research(state: ResearcherState) -> dict:
@@ -78,23 +107,36 @@ def compress_research(state: ResearcherState) -> dict:
     Takes all the research messages and tool outputs and creates
     a compressed summary suitable for the supervisor's decision-making.
     """
+    logger.info("Starting research compression")
+    logger.debug(f"Compressing {len(state.get('researcher_messages', []))} messages")
 
-    system_message = compress_research_system_prompt.format(date=get_today_str())
-    messages = [SystemMessage(content=system_message)] + state.get("researcher_messages", []) + [HumanMessage(content=compress_research_human_message)]
-    response = compress_model.invoke(messages)
+    try:
+        system_message = compress_research_system_prompt.format(date=get_today_str())
+        messages = [SystemMessage(content=system_message)] + state.get("researcher_messages", []) + [HumanMessage(content=compress_research_human_message)]
+        
+        logger.debug("Invoking compression model")
+        response = compress_model.invoke(messages)
 
-    # Extract raw notes from tool and AI messages
-    raw_notes = [
-        str(m.content) for m in filter_messages(
-            state["researcher_messages"], 
-            include_types=["tool", "ai"]
-        )
-    ]
+        # Extract raw notes from tool and AI messages
+        raw_notes = [
+            str(m.content) for m in filter_messages(
+                state["researcher_messages"], 
+                include_types=["tool", "ai"]
+            )
+        ]
 
-    return {
-        "compressed_research": str(response.content),
-        "raw_notes": ["\n".join(raw_notes)]
-    }
+        compressed_content = str(response.content)
+        logger.info(f"Research compression completed. Compressed content length: {len(compressed_content)} characters")
+        logger.debug(f"Extracted {len(raw_notes)} raw notes")
+
+        return {
+            "compressed_research": compressed_content,
+            "raw_notes": ["\n".join(raw_notes)]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error during research compression: {str(e)}", exc_info=True)
+        raise
 
 # ===== ROUTING LOGIC =====
 
@@ -113,8 +155,10 @@ def should_continue(state: ResearcherState) -> Literal["tool_node", "compress_re
 
     # If the LLM makes a tool call, continue to tool execution
     if last_message.tool_calls:
+        logger.debug("Routing to tool_node - LLM made tool calls")
         return "tool_node"
     # Otherwise, we have a final answer
+    logger.debug("Routing to compress_research - LLM provided final answer")
     return "compress_research"
 
 # ===== GRAPH CONSTRUCTION =====

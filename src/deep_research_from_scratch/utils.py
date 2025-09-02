@@ -5,6 +5,7 @@ This module provides search and content processing utilities for the research ag
 including web search capabilities and content summarization tools.
 """
 
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing_extensions import Annotated, List, Literal
@@ -13,10 +14,13 @@ from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool, InjectedToolArg
-from tavily import TavilyClient
+from ddgs import DDGS
 
 from deep_research_from_scratch.state_research import Summary
 from deep_research_from_scratch.prompts import summarize_webpage_prompt
+
+# Set up logger for this module
+logger = logging.getLogger("deep_research.utils")
 
 # ===== UTILITY FUNCTIONS =====
 
@@ -39,40 +43,69 @@ def get_current_dir() -> Path:
 
 # ===== CONFIGURATION =====
 
-summarization_model = init_chat_model(model="openai:gpt-4.1-mini")
-tavily_client = TavilyClient()
+summarization_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0")
+ddgs_client = DDGS()
 
 # ===== SEARCH FUNCTIONS =====
 
-def tavily_search_multiple(
+def ddgs_search_multiple(
     search_queries: List[str], 
     max_results: int = 3, 
-    topic: Literal["general", "news", "finance"] = "general", 
-    include_raw_content: bool = True, 
+    region: str = "us-en",
+    safesearch: str = "moderate",
 ) -> List[dict]:
-    """Perform search using Tavily API for multiple queries.
+    """Perform search using DDGS API for multiple queries.
 
     Args:
         search_queries: List of search queries to execute
         max_results: Maximum number of results per query
-        topic: Topic filter for search results
-        include_raw_content: Whether to include raw webpage content
+        region: Region for search results (e.g., "us-en", "uk-en")
+        safesearch: Safe search setting ("on", "moderate", "off")
 
     Returns:
         List of search result dictionaries
     """
-
-    # Execute searches sequentially. Note: yon can use AsyncTavilyClient to parallelize this step.
+    logger.info(f"Starting DDGS search for {len(search_queries)} queries: {search_queries}")
+    
+    # Execute searches sequentially
     search_docs = []
-    for query in search_queries:
-        result = tavily_client.search(
-            query,
-            max_results=max_results,
-            include_raw_content=include_raw_content,
-            topic=topic
-        )
-        search_docs.append(result)
+    for i, query in enumerate(search_queries):
+        try:
+            logger.debug(f"Searching query {i+1}/{len(search_queries)}: {query}")
+            
+            # Use DDGS text search
+            results = list(ddgs_client.text(
+                query,
+                max_results=max_results,
+                region=region,
+                safesearch=safesearch
+            ))
+            
+            logger.debug(f"Found {len(results)} results for query: {query}")
+            
+            # Convert DDGS results to expected format
+            formatted_results = {
+                'results': []
+            }
+            
+            for result in results:
+                formatted_results['results'].append({
+                    'title': result.get('title', ''),
+                    'url': result.get('href', ''),
+                    'content': result.get('body', ''),
+                    'raw_content': result.get('body', '')  # DDGS doesn't provide separate raw content
+                })
+            
+            search_docs.append(formatted_results)
+            logger.debug(f"Formatted {len(formatted_results['results'])} results for query: {query}")
+            
+        except Exception as e:
+            logger.error(f"Error searching for '{query}': {str(e)}", exc_info=True)
+            # Return empty results on error
+            search_docs.append({'results': []})
 
+    total_results = sum(len(doc['results']) for doc in search_docs)
+    logger.info(f"DDGS search completed. Total results across all queries: {total_results}")
     return search_docs
 
 def summarize_webpage_content(webpage_content: str) -> str:
@@ -84,6 +117,8 @@ def summarize_webpage_content(webpage_content: str) -> str:
     Returns:
         Formatted summary with key excerpts
     """
+    logger.debug(f"Summarizing webpage content of length: {len(webpage_content)} characters")
+    
     try:
         # Set up structured output model for summarization
         structured_model = summarization_model.with_structured_output(Summary)
@@ -102,11 +137,14 @@ def summarize_webpage_content(webpage_content: str) -> str:
             f"<key_excerpts>\n{summary.key_excerpts}\n</key_excerpts>"
         )
 
+        logger.debug(f"Successfully summarized content. Summary length: {len(formatted_summary)} characters")
         return formatted_summary
 
     except Exception as e:
-        print(f"Failed to summarize webpage: {str(e)}")
-        return webpage_content[:1000] + "..." if len(webpage_content) > 1000 else webpage_content
+        logger.error(f"Failed to summarize webpage: {str(e)}", exc_info=True)
+        fallback_content = webpage_content[:1000] + "..." if len(webpage_content) > 1000 else webpage_content
+        logger.debug(f"Using fallback content of length: {len(fallback_content)} characters")
+        return fallback_content
 
 def deduplicate_search_results(search_results: List[dict]) -> dict:
     """Deduplicate search results by URL to avoid processing duplicate content.
@@ -178,37 +216,45 @@ def format_search_output(summarized_results: dict) -> str:
 # ===== RESEARCH TOOLS =====
 
 @tool(parse_docstring=True)
-def tavily_search(
+def ddgs_search(
     query: str,
     max_results: Annotated[int, InjectedToolArg] = 3,
-    topic: Annotated[Literal["general", "news", "finance"], InjectedToolArg] = "general",
+    region: Annotated[str, InjectedToolArg] = "us-en",
+    safesearch: Annotated[str, InjectedToolArg] = "moderate",
 ) -> str:
-    """Fetch results from Tavily search API with content summarization.
+    """Fetch results from DDGS search API with content summarization.
 
     Args:
         query: A single search query to execute
         max_results: Maximum number of results to return
-        topic: Topic to filter results by ('general', 'news', 'finance')
+        region: Region for search results (e.g., "us-en", "uk-en")
+        safesearch: Safe search setting ("on", "moderate", "off")
 
     Returns:
         Formatted string of search results with summaries
     """
+    logger.info(f"DDGS search tool called with query: '{query}', max_results: {max_results}")
+    
     # Execute search for single query
-    search_results = tavily_search_multiple(
+    search_results = ddgs_search_multiple(
         [query],  # Convert single query to list for the internal function
         max_results=max_results,
-        topic=topic,
-        include_raw_content=True,
+        region=region,
+        safesearch=safesearch,
     )
 
     # Deduplicate results by URL to avoid processing duplicate content
     unique_results = deduplicate_search_results(search_results)
+    logger.debug(f"After deduplication: {len(unique_results)} unique results")
 
     # Process results with summarization
     summarized_results = process_search_results(unique_results)
+    logger.debug(f"After summarization: {len(summarized_results)} processed results")
 
     # Format output for consumption
-    return format_search_output(summarized_results)
+    formatted_output = format_search_output(summarized_results)
+    logger.info(f"DDGS search tool completed. Output length: {len(formatted_output)} characters")
+    return formatted_output
 
 @tool(parse_docstring=True)
 def think_tool(reflection: str) -> str:
@@ -235,4 +281,6 @@ def think_tool(reflection: str) -> str:
     Returns:
         Confirmation that reflection was recorded for decision-making
     """
+    logger.debug(f"Think tool called with reflection of length: {len(reflection)} characters")
+    logger.debug(f"Reflection content: {reflection[:200]}...")  # Log first 200 chars
     return f"Reflection recorded: {reflection}"
