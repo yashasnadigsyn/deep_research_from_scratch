@@ -72,7 +72,7 @@ except ImportError:
 # ===== CONFIGURATION =====
 
 supervisor_tools = [ConductResearch, ResearchComplete, think_tool]
-supervisor_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0")
+supervisor_model = init_chat_model(model="ollama:granite3.3:2b")
 supervisor_model_with_tools = supervisor_model.bind_tools(supervisor_tools)
 
 # System constants

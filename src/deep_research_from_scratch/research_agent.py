@@ -27,10 +27,10 @@ tools = [ddgs_search, think_tool]
 tools_by_name = {tool.name: tool for tool in tools}
 
 # Initialize models
-model = init_chat_model(model="ollama:qwen3:0.6b-q8_0")
+model = init_chat_model(model="ollama:granite3.3:2b")
 model_with_tools = model.bind_tools(tools)
-summarization_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0")
-compress_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0", max_tokens=32000)
+summarization_model = init_chat_model(model="ollama:granite3.3:2b")
+compress_model = init_chat_model(model="ollama:granite3.3:2b", max_tokens=32000)
 
 # ===== AGENT NODES =====
 

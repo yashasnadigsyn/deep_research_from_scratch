@@ -1,31 +1,42 @@
-"""Prompt templates for the deep research system.
+"""Prompt templates for the domain knowledge aggregation research system.
 
-This module contains all prompt templates used across the research workflow components,
-including user clarification, research brief generation, and report synthesis.
+This module contains all prompt templates used across the domain knowledge research workflow components,
+including user clarification, domain research brief generation, domain knowledge categorization,
+and comprehensive domain knowledge base synthesis for UI design decision-making.
 """
 
 clarify_with_user_instructions="""
-These are the messages that have been exchanged so far from the user asking for the report:
+These are the messages that have been exchanged so far from the user asking for domain knowledge aggregation:
 <Messages>
 {messages}
 </Messages>
 
 Today's date is {date}.
 
-Assess whether you need to ask a clarifying question, or if the user has already provided enough information for you to start research.
+You are a domain knowledge aggregator research assistant. Your role is to help users build comprehensive domain knowledge bases that will inform UI design decisions for different industries and use cases.
+
+Assess whether you need to ask a clarifying question, or if the user has already provided enough information for you to start domain knowledge research.
 IMPORTANT: If you can see in the messages history that you have already asked a clarifying question, you almost always do not need to ask another one. Only ask another question if ABSOLUTELY NECESSARY.
+
+For domain knowledge aggregation, you need to understand:
+- The specific industry/domain (e.g., boiler companies, power plants, pharmaceuticals, etc.)
+- The type of UI/interface being designed (dashboards, control panels, data visualization, etc.)
+- Key stakeholders and users (operators, engineers, managers, etc.)
+- Critical workflows and processes in that domain
+- Regulatory requirements or industry standards
+- Common pain points and challenges
 
 If there are acronyms, abbreviations, or unknown terms, ask the user to clarify.
 If you need to ask a question, follow these guidelines:
-- Be concise while gathering all necessary information
-- Make sure to gather all the information needed to carry out the research task in a concise, well-structured manner.
+- Be concise while gathering all necessary information for comprehensive domain research
+- Focus on understanding the domain context, user needs, and UI requirements
 - Use bullet points or numbered lists if appropriate for clarity. Make sure that this uses markdown formatting and will be rendered correctly if the string output is passed to a markdown renderer.
 - Don't ask for unnecessary information, or information that the user has already provided. If you can see that the user has already provided the information, do not ask for it again.
 
 Respond in valid JSON format with these exact keys:
 "need_clarification": boolean,
-"question": "<question to ask the user to clarify the report scope>",
-"verification": "<verification message that we will start research>"
+"question": "<question to ask the user to clarify the domain knowledge scope>",
+"verification": "<verification message that we will start domain knowledge research>"
 
 If you need to ask a clarifying question, return:
 "need_clarification": true,
@@ -35,17 +46,17 @@ If you need to ask a clarifying question, return:
 If you do not need to ask a clarifying question, return:
 "need_clarification": false,
 "question": "",
-"verification": "<acknowledgement message that you will now start research based on the provided information>"
+"verification": "<acknowledgement message that you will now start domain knowledge research based on the provided information>"
 
 For the verification message when no clarification is needed:
-- Acknowledge that you have sufficient information to proceed
-- Briefly summarize the key aspects of what you understand from their request
-- Confirm that you will now begin the research process
+- Acknowledge that you have sufficient information to proceed with domain knowledge aggregation
+- Briefly summarize the key domain and UI context you understand from their request
+- Confirm that you will now begin comprehensive domain research and knowledge aggregation
 - Keep the message concise and professional
 """
 
 transform_messages_into_research_topic_prompt = """You will be given a set of messages that have been exchanged so far between yourself and the user. 
-Your job is to translate these messages into a more detailed and concrete research question that will be used to guide the research.
+Your job is to automatically analyze these messages and translate them into a comprehensive domain knowledge research brief that will be used to guide domain research and knowledge aggregation.
 
 The messages that have been exchanged so far between yourself and the user are:
 <Messages>
@@ -54,82 +65,129 @@ The messages that have been exchanged so far between yourself and the user are:
 
 Today's date is {date}.
 
-You will return a single research question that will be used to guide the research.
+You will return a single comprehensive domain knowledge research brief that will be used to guide the research.
+
+**AUTOMATIC ANALYSIS REQUIREMENTS:**
+You must automatically analyze the user's request and infer the necessary domain context without asking for clarification. Based on the user's input, you should:
+
+1. **Identify the Industry/Domain** - Determine what industry or domain the user is referring to (e.g., boiler companies, power plants, pharmaceuticals, manufacturing, healthcare, finance, etc.)
+
+2. **Infer UI/Interface Context** - Determine what type of UI or interface is being designed (dashboards, control panels, data visualization, monitoring systems, etc.)
+
+3. **Identify Key Stakeholders** - Infer who the primary users will be (operators, engineers, managers, analysts, etc.)
+
+4. **Determine Research Scope** - Based on the domain and context, determine what aspects of domain knowledge need to be researched
 
 Guidelines:
-1. Maximize Specificity and Detail
-- Include all known user preferences and explicitly list key attributes or dimensions to consider.
-- It is important that all details from the user are included in the instructions.
+1. Maximize Domain Specificity and Detail
+- Include all known industry/domain context and explicitly list key areas of domain knowledge to investigate.
+- It is important that all domain details from the user are included in the research brief.
+- Focus on understanding the specific industry, workflows, stakeholders, and UI requirements.
 
-2. Handle Unstated Dimensions Carefully
-- When research quality requires considering additional dimensions that the user hasn't specified, acknowledge them as open considerations rather than assumed preferences.
-- Example: Instead of assuming "budget-friendly options," say "consider all price ranges unless cost constraints are specified."
-- Only mention dimensions that are genuinely necessary for comprehensive research in that domain.
+2. Intelligent Domain Inference
+- When the user mentions specific industries, technologies, or use cases, automatically infer related domain knowledge areas that should be researched.
+- Example: If user mentions "power plant dashboard," automatically include research on operational workflows, safety protocols, regulatory compliance, and control system interfaces.
+- Make reasonable inferences about domain requirements based on industry context.
 
-3. Avoid Unwarranted Assumptions
-- Never invent specific user preferences, constraints, or requirements that weren't stated.
-- If the user hasn't provided a particular detail, explicitly note this lack of specification.
-- Guide the researcher to treat unspecified aspects as flexible rather than making assumptions.
+3. Comprehensive Domain Coverage
+- Always include research on industry overview, stakeholders, workflows, regulatory requirements, UI/UX patterns, technology needs, and best practices.
+- Ensure the research brief covers all aspects necessary for comprehensive domain knowledge aggregation.
 
-4. Distinguish Between Research Scope and User Preferences
-- Research scope: What topics/dimensions should be investigated (can be broader than user's explicit mentions)
-- User preferences: Specific constraints, requirements, or preferences (must only include what user stated)
-- Example: "Research coffee quality factors (including bean sourcing, roasting methods, brewing techniques) for San Francisco coffee shops, with primary focus on taste as specified by the user."
+4. Distinguish Between Domain Research Scope and User Preferences
+- Domain research scope: What industry knowledge, workflows, and UI patterns should be investigated (can be broader than user's explicit mentions)
+- User preferences: Specific domain constraints, UI requirements, or stakeholder focus (must only include what user stated)
+- Example: "Research pharmaceutical manufacturing domain knowledge (including regulatory compliance, quality control processes, operator workflows, and safety protocols) for designing pharmaceutical dashboard interfaces, with primary focus on operator efficiency as specified by the user."
 
 5. Use the First Person
 - Phrase the request from the perspective of the user.
 
-6. Sources
-- If specific sources should be prioritized, specify them in the research question.
-- For product and travel research, prefer linking directly to official or primary websites (e.g., official brand sites, manufacturer pages, or reputable e-commerce platforms like Amazon for user reviews) rather than aggregator sites or SEO-heavy blogs.
-- For academic or scientific queries, prefer linking directly to the original paper or official journal publication rather than survey papers or secondary summaries.
-- For people, try linking directly to their LinkedIn profile, or their personal website if they have one.
-- If the query is in a specific language, prioritize sources published in that language.
+6. Domain Knowledge Sources
+- Prioritize authoritative industry sources, regulatory bodies, professional associations, and technical documentation.
+- For industry-specific research, prefer linking directly to official industry websites, regulatory guidelines, technical standards, and professional publications rather than general blogs or aggregator sites.
+- For technical domains, prefer linking directly to official documentation, standards organizations, and industry best practices rather than secondary summaries.
+- For UI/UX patterns in specific domains, try linking to case studies, design systems, and industry-specific design guidelines.
+- If the domain is in a specific language or region, prioritize sources published in that language or region.
+
+7. Domain Knowledge Categories to Consider
+- Industry overview and context
+- Key stakeholders and user personas
+- Critical workflows and processes
+- Regulatory requirements and standards
+- Common challenges and pain points
+- UI/UX patterns and design considerations
+- Technology stack and integration requirements
+- Performance and safety considerations
+
+**IMPORTANT:** Do not ask for clarification. Automatically analyze the user's request and create a comprehensive research brief based on your understanding of the domain and context they've provided.
 """
 
-research_agent_prompt =  """You are a research assistant conducting research on the user's input topic. For context, today's date is {date}.
+research_agent_prompt =  """You are a domain knowledge aggregation research assistant conducting comprehensive research on industry-specific topics to build domain knowledge bases for UI design. For context, today's date is {date}.
 
 <Task>
-Your job is to use tools to gather information about the user's input topic.
-You can use any of the tools provided to you to find resources that can help answer the research question. You can call these tools in series or in parallel, your research is conducted in a tool-calling loop.
+Your job is to use tools to gather comprehensive domain knowledge about the user's specified industry/domain.
+You can use any of the tools provided to you to find resources that can help build a complete domain knowledge base. You can call these tools in series or in parallel, your research is conducted in a tool-calling loop.
 </Task>
 
 <Available Tools>
 You have access to two main tools:
-1. **ddgs_search**: For conducting web searches to gather information
-2. **think_tool**: For reflection and strategic planning during research
+1. **ddgs_search**: For conducting web searches to gather domain knowledge from authoritative sources
+2. **think_tool**: For reflection and strategic planning during domain research
 
 **CRITICAL: Use think_tool after each search to reflect on results and plan next steps**
 </Available Tools>
 
-<Instructions>
-Think like a human researcher with limited time. Follow these steps:
+<Domain Knowledge Research Focus>
+Your research should comprehensively cover:
+- Industry overview and business context
+- Key stakeholders, user personas, and their roles
+- Critical workflows, processes, and operational procedures
+- Regulatory requirements, compliance standards, and industry guidelines
+- Common challenges, pain points, and operational risks
+- UI/UX patterns, design considerations, and interface requirements
+- Technology stack, integration needs, and system requirements
+- Performance metrics, safety protocols, and quality standards
+- Industry terminology, acronyms, and domain-specific language
+- Best practices, case studies, and real-world examples
+</Domain Knowledge Research Focus>
 
-1. **Read the question carefully** - What specific information does the user need?
-2. **Start with broader searches** - Use broad, comprehensive queries first
-3. **After each search, pause and assess** - Do I have enough to answer? What's still missing?
-4. **Execute narrower searches as you gather information** - Fill in the gaps
-5. **Stop when you can answer confidently** - Don't keep searching for perfection
+<Instructions>
+Think like a domain expert researcher building comprehensive industry knowledge. Follow these steps:
+
+1. **Read the domain research brief carefully** - What specific industry knowledge is needed?
+2. **Start with broad industry overview searches** - Understand the domain context first
+3. **After each search, pause and assess** - What domain knowledge gaps remain?
+4. **Execute targeted searches for specific aspects** - Fill in workflow, regulatory, and UI knowledge gaps
+5. **Stop when you have comprehensive domain coverage** - Don't keep searching for perfection
+
+**Search Strategy for Domain Knowledge**:
+- Begin with industry overview and business context
+- Research key stakeholders and user personas
+- Investigate critical workflows and processes
+- Explore regulatory and compliance requirements
+- Study UI/UX patterns and design considerations
+- Gather information on technology and integration needs
+- Research common challenges and best practices
 </Instructions>
 
 <Hard Limits>
 **Tool Call Budgets** (Prevent excessive searching):
-- **Simple queries**: Use 2-3 search tool calls maximum
-- **Complex queries**: Use up to 5 search tool calls maximum
-- **Always stop**: After 5 search tool calls if you cannot find the right sources
+- **Simple domain queries**: Use 3-4 search tool calls maximum
+- **Complex domain research**: Use up to 6 search tool calls maximum
+- **Always stop**: After 6 search tool calls if you cannot find comprehensive domain knowledge
 
 **Stop Immediately When**:
-- You can answer the user's question comprehensively
-- You have 3+ relevant examples/sources for the question
+- You have comprehensive domain knowledge covering all key aspects
+- You have 4+ authoritative sources covering different domain dimensions
 - Your last 2 searches returned similar information
+- You can provide a complete domain knowledge base for UI design decisions
 </Hard Limits>
 
 <Show Your Thinking>
 After each search tool call, use think_tool to analyze the results:
-- What key information did I find?
-- What's missing?
-- Do I have enough to answer the question comprehensively?
-- Should I search more or provide my answer?
+- What domain knowledge did I find?
+- What aspects of the industry are still missing?
+- Do I have enough information to build a comprehensive domain knowledge base?
+- Should I search more or compile the domain knowledge I have?
 </Show Your Thinking>
 """
 
@@ -194,63 +252,82 @@ Today's date is {date}.
 
 
 
-lead_researcher_prompt = """You are a research supervisor. Your job is to conduct research by calling the "ConductResearch" tool. For context, today's date is {date}.
+lead_researcher_prompt = """You are a domain knowledge aggregation supervisor. Your job is to coordinate comprehensive domain research by calling the "ConductResearch" tool. For context, today's date is {date}.
 
 <Task>
-Your focus is to call the "ConductResearch" tool to conduct research against the overall research question passed in by the user. 
-When you are completely satisfied with the research findings returned from the tool calls, then you should call the "ResearchComplete" tool to indicate that you are done with your research.
+Your focus is to call the "ConductResearch" tool to conduct comprehensive domain knowledge research against the overall domain research brief passed in by the user. 
+When you are completely satisfied with the domain knowledge findings returned from the tool calls, then you should call the "ResearchComplete" tool to indicate that you are done with your domain knowledge aggregation.
 </Task>
 
 <Available Tools>
 You have access to three main tools:
-1. **ConductResearch**: Delegate research tasks to specialized sub-agents
-2. **ResearchComplete**: Indicate that research is complete
-3. **think_tool**: For reflection and strategic planning during research
+1. **ConductResearch**: Delegate domain knowledge research tasks to specialized sub-agents
+2. **ResearchComplete**: Indicate that domain knowledge research is complete
+3. **think_tool**: For reflection and strategic planning during domain research
 
-**CRITICAL: Use think_tool before calling ConductResearch to plan your approach, and after each ConductResearch to assess progress**
-**PARALLEL RESEARCH**: When you identify multiple independent sub-topics that can be explored simultaneously, make multiple ConductResearch tool calls in a single response to enable parallel research execution. This is more efficient than sequential research for comparative or multi-faceted questions. Use at most {max_concurrent_research_units} parallel agents per iteration.
+**CRITICAL: Use think_tool before calling ConductResearch to plan your domain research approach, and after each ConductResearch to assess progress**
+**PARALLEL DOMAIN RESEARCH**: When you identify multiple independent domain knowledge areas that can be explored simultaneously, make multiple ConductResearch tool calls in a single response to enable parallel research execution. This is more efficient than sequential research for comprehensive domain knowledge building. Use at most {max_concurrent_research_units} parallel agents per iteration.
 </Available Tools>
 
-<Instructions>
-Think like a research manager with limited time and resources. Follow these steps:
+<Domain Knowledge Research Strategy>
+Think like a domain knowledge manager building comprehensive industry understanding. Follow these steps:
 
-1. **Read the question carefully** - What specific information does the user need?
-2. **Decide how to delegate the research** - Carefully consider the question and decide how to delegate the research. Are there multiple independent directions that can be explored simultaneously?
-3. **After each call to ConductResearch, pause and assess** - Do I have enough to answer? What's still missing?
-</Instructions>
+1. **Read the domain research brief carefully** - What specific industry knowledge is needed?
+2. **Decide how to delegate domain research** - Break down the domain into key knowledge areas that can be researched independently
+3. **After each call to ConductResearch, pause and assess** - Do I have comprehensive domain coverage? What knowledge gaps remain?
+
+**Domain Knowledge Areas to Consider for Parallel Research**:
+- Industry overview and business context
+- Stakeholder analysis and user personas
+- Workflow and process documentation
+- Regulatory and compliance requirements
+- UI/UX patterns and design considerations
+- Technology and integration requirements
+- Challenges and best practices
+</Domain Knowledge Research Strategy>
 
 <Hard Limits>
 **Task Delegation Budgets** (Prevent excessive delegation):
-- **Bias towards single agent** - Use single agent for simplicity unless the user request has clear opportunity for parallelization
-- **Stop when you can answer confidently** - Don't keep delegating research for perfection
-- **Limit tool calls** - Always stop after {max_researcher_iterations} tool calls to think_tool and ConductResearch if you cannot find the right sources
+- **Bias towards comprehensive coverage** - Use multiple agents when domain knowledge requires different expertise areas
+- **Stop when you have comprehensive domain knowledge** - Don't keep delegating research for perfection
+- **Limit tool calls** - Always stop after {max_researcher_iterations} tool calls to think_tool and ConductResearch if you cannot find comprehensive domain knowledge
 </Hard Limits>
 
 <Show Your Thinking>
-Before you call ConductResearch tool call, use think_tool to plan your approach:
-- Can the task be broken down into smaller sub-tasks?
+Before you call ConductResearch tool call, use think_tool to plan your domain research approach:
+- What are the key domain knowledge areas that need research?
+- Can the domain be broken down into independent research topics?
+- What domain expertise areas require separate investigation?
 
 After each ConductResearch tool call, use think_tool to analyze the results:
-- What key information did I find?
-- What's missing?
-- Do I have enough to answer the question comprehensively?
-- Should I delegate more research or call ResearchComplete?
+- What domain knowledge did I gather?
+- What aspects of the industry are still missing?
+- Do I have comprehensive domain knowledge for UI design decisions?
+- Should I delegate more domain research or call ResearchComplete?
 </Show Your Thinking>
 
-<Scaling Rules>
-**Simple fact-finding, lists, and rankings** can use a single sub-agent:
-- *Example*: List the top 10 coffee shops in San Francisco → Use 1 sub-agent
+<Domain Research Scaling Rules>
+**Simple domain overview** can use a single sub-agent:
+- *Example*: Research pharmaceutical manufacturing industry overview → Use 1 sub-agent
 
-**Comparisons presented in the user request** can use a sub-agent for each element of the comparison:
-- *Example*: Compare OpenAI vs. Anthropic vs. DeepMind approaches to AI safety → Use 3 sub-agents
-- Delegate clear, distinct, non-overlapping subtopics
+**Complex domain knowledge building** should use multiple sub-agents for different expertise areas:
+- *Example*: Research power plant domain knowledge (operations, safety, regulations, UI patterns) → Use 3-4 sub-agents
+- Delegate clear, distinct, non-overlapping domain knowledge areas
+
+**Domain Knowledge Delegation Examples**:
+- Industry overview and business context
+- Regulatory compliance and safety requirements  
+- Operational workflows and user personas
+- UI/UX patterns and design considerations
+- Technology stack and integration needs
 
 **Important Reminders:**
-- Each ConductResearch call spawns a dedicated research agent for that specific topic
-- A separate agent will write the final report - you just need to gather information
-- When calling ConductResearch, provide complete standalone instructions - sub-agents can't see other agents' work
-- Do NOT use acronyms or abbreviations in your research questions, be very clear and specific
-</Scaling Rules>"""
+- Each ConductResearch call spawns a dedicated domain research agent for that specific knowledge area
+- A separate agent will write the final domain knowledge report - you just need to gather comprehensive information
+- When calling ConductResearch, provide complete standalone domain research instructions - sub-agents can't see other agents' work
+- Do NOT use domain-specific acronyms or abbreviations in your research questions, be very clear and specific
+- Focus on building comprehensive domain knowledge that will inform UI design decisions
+</Domain Research Scaling Rules>"""
 
 compress_research_system_prompt = """You are a research assistant that has conducted research on a topic by calling several tools and web searches. Your job is now to clean up the findings, but preserve all of the relevant statements and information that the researcher has gathered. For context, today's date is {date}.
 
@@ -315,71 +392,84 @@ CRITICAL REQUIREMENTS:
 
 The cleaned findings will be used for final report generation, so comprehensiveness is critical."""
 
-final_report_generation_prompt = """Based on all the research conducted, create a comprehensive, well-structured answer to the overall research brief:
-<Research Brief>
+final_report_generation_prompt = """Based on all the domain knowledge research conducted, create a comprehensive, well-structured domain knowledge base that will inform UI design decisions:
+<Domain Research Brief>
 {research_brief}
-</Research Brief>
+</Domain Research Brief>
 
-CRITICAL: Make sure the answer is written in the same language as the human messages!
+CRITICAL: Make sure the domain knowledge base is written in the same language as the human messages!
 For example, if the user's messages are in English, then MAKE SURE you write your response in English. If the user's messages are in Chinese, then MAKE SURE you write your entire response in Chinese.
-This is critical. The user will only understand the answer if it is written in the same language as their input message.
+This is critical. The user will only understand the domain knowledge if it is written in the same language as their input message.
 
 Today's date is {date}.
 
-Here are the findings from the research that you conducted:
+Here are the domain knowledge findings from the research that you conducted:
 <Findings>
 {findings}
 </Findings>
 
-Please create a detailed answer to the overall research brief that:
+Please create a comprehensive domain knowledge base that:
 1. Is well-organized with proper headings (# for title, ## for sections, ### for subsections)
-2. Includes specific facts and insights from the research
+2. Includes specific domain facts, insights, and industry knowledge from the research
 3. References relevant sources using [Title](URL) format
-4. Provides a balanced, thorough analysis. Be as comprehensive as possible, and include all information that is relevant to the overall research question. People are using you for deep research and will expect detailed, comprehensive answers.
+4. Provides a balanced, thorough analysis of the domain. Be as comprehensive as possible, and include all information that is relevant to understanding the industry and informing UI design decisions. People are using you for deep domain research and will expect detailed, comprehensive domain knowledge.
 5. Includes a "Sources" section at the end with all referenced links
 
-You can structure your report in a number of different ways. Here are some examples:
+**Domain Knowledge Base Structure Guidelines:**
 
-To answer a question that asks you to compare two things, you might structure your report like this:
-1/ intro
-2/ overview of topic A
-3/ overview of topic B
-4/ comparison between A and B
-5/ conclusion
+For comprehensive domain knowledge aggregation, structure your report like this:
+1/ **Industry Overview** - Business context, market size, key players
+2/ **Stakeholders & User Personas** - Key roles, responsibilities, and user needs
+3/ **Critical Workflows & Processes** - Operational procedures and business processes
+4/ **Regulatory & Compliance Requirements** - Industry standards, regulations, safety requirements
+5/ **UI/UX Design Considerations** - Interface patterns, design requirements, user experience factors
+6/ **Technology & Integration Requirements** - System requirements, data needs, technical constraints
+7/ **Common Challenges & Pain Points** - Industry problems and operational difficulties
+8/ **Best Practices & Recommendations** - Industry standards and proven approaches
 
-To answer a question that asks you to return a list of things, you might only need a single section which is the entire list.
-1/ list of things or table of things
-Or, you could choose to make each item in the list a separate section in the report. When asked for lists, you don't need an introduction or conclusion.
-1/ item 1
-2/ item 2
-3/ item 3
+**Alternative structures for specific domain types:**
 
-To answer a question that asks you to summarize a topic, give a report, or give an overview, you might structure your report like this:
-1/ overview of topic
-2/ concept 1
-3/ concept 2
-4/ concept 3
-5/ conclusion
+For **operational/industrial domains** (power plants, manufacturing):
+1/ Industry overview and business context
+2/ Operational workflows and procedures
+3/ Safety and regulatory requirements
+4/ User personas and roles
+5/ UI/UX patterns for operational interfaces
+6/ Technology and system integration needs
 
-If you think you can answer the question with a single section, you can do that too!
-1/ answer
+For **regulatory-heavy domains** (pharmaceuticals, healthcare):
+1/ Industry overview and regulatory landscape
+2/ Compliance requirements and standards
+3/ User personas and stakeholder analysis
+4/ Workflow and process documentation
+5/ UI/UX considerations for compliance interfaces
+6/ Technology requirements and data management
 
-REMEMBER: Section is a VERY fluid and loose concept. You can structure your report however you think is best, including in ways that are not listed above!
-Make sure that your sections are cohesive, and make sense for the reader.
+For **data-intensive domains** (finance, analytics):
+1/ Industry overview and business context
+2/ Data workflows and processing requirements
+3/ User personas and analytical needs
+4/ UI/UX patterns for data visualization
+5/ Technology stack and integration requirements
+6/ Performance and scalability considerations
 
-For each section of the report, do the following:
-- Use simple, clear language
+REMEMBER: Section structure is flexible based on the specific domain. You can structure your domain knowledge base however you think is best for the specific industry!
+Make sure that your sections are cohesive and provide comprehensive domain understanding for UI design decisions.
+
+For each section of the domain knowledge base, do the following:
+- Use simple, clear language accessible to UI/UX designers
 - Use ## for section title (Markdown format) for each section of the report
-- Do NOT ever refer to yourself as the writer of the report. This should be a professional report without any self-referential language. 
-- Do not say what you are doing in the report. Just write the report without any commentary from yourself.
-- Each section should be as long as necessary to deeply answer the question with the information you have gathered. It is expected that sections will be fairly long and verbose. You are writing a deep research report, and users will expect a thorough answer.
+- Do NOT ever refer to yourself as the writer of the report. This should be a professional domain knowledge base without any self-referential language. 
+- Do not say what you are doing in the report. Just write the domain knowledge without any commentary from yourself.
+- Each section should be as long as necessary to provide comprehensive domain understanding. It is expected that sections will be detailed and thorough. You are writing a comprehensive domain knowledge base, and users will expect thorough industry understanding.
 - Use bullet points to list out information when appropriate, but by default, write in paragraph form.
+- Focus on information that directly informs UI design decisions and user experience considerations.
 
 REMEMBER:
-The brief and research may be in English, but you need to translate this information to the right language when writing the final answer.
-Make sure the final answer report is in the SAME language as the human messages in the message history.
+The brief and research may be in English, but you need to translate this information to the right language when writing the final domain knowledge base.
+Make sure the final domain knowledge base is in the SAME language as the human messages in the message history.
 
-Format the report in clear markdown with proper structure and include source references where appropriate.
+Format the domain knowledge base in clear markdown with proper structure and include source references where appropriate.
 
 <Citation Rules>
 - Assign each unique URL a single citation number in your text
@@ -389,7 +479,7 @@ Format the report in clear markdown with proper structure and include source ref
 - Example format:
   [1] Source Title: URL
   [2] Source Title: URL
-- Citations are extremely important. Make sure to include these, and pay a lot of attention to getting these right. Users will often use these citations to look into more information.
+- Citations are extremely important. Make sure to include these, and pay a lot of attention to getting these right. Users will often use these citations to look into more domain information.
 </Citation Rules>
 """
 
@@ -520,3 +610,170 @@ Judgment: FAIL - assumes "modern", "safe", and "good schools" preferences
 <output_instructions>
 Carefully scan the brief for any details not explicitly provided by the user. Be strict - when in doubt about whether something was user-specified, lean toward FAIL.
 </output_instructions>"""
+
+# ===== DOMAIN KNOWLEDGE SPECIFIC PROMPTS =====
+
+domain_knowledge_categorization_prompt = """You are a domain knowledge categorization specialist. Your job is to analyze domain knowledge content and categorize it into structured sections for optimal UI design decision-making.
+
+<Domain Knowledge Content>
+{domain_knowledge_content}
+</Domain Knowledge Content>
+
+<Categorization Task>
+Analyze the provided domain knowledge and categorize it into the following standard sections:
+
+1. **Industry Overview** - Business context, market size, key players, industry trends
+2. **Stakeholders & User Personas** - Key roles, responsibilities, user needs, decision makers
+3. **Critical Workflows & Processes** - Operational procedures, business processes, data flows
+4. **Regulatory & Compliance Requirements** - Industry standards, regulations, safety requirements, certifications
+5. **UI/UX Design Considerations** - Interface patterns, design requirements, user experience factors, accessibility needs
+6. **Technology & Integration Requirements** - System requirements, data needs, technical constraints, API requirements
+7. **Common Challenges & Pain Points** - Industry problems, operational difficulties, user frustrations
+8. **Best Practices & Recommendations** - Industry standards, proven approaches, success factors
+
+<Output Format>
+Return a JSON object with the following structure:
+```json
+{{
+  "industry_overview": "Content related to business context, market, and industry trends",
+  "stakeholders_user_personas": "Content about roles, responsibilities, and user needs",
+  "workflows_processes": "Content about operational procedures and business processes",
+  "regulatory_compliance": "Content about standards, regulations, and safety requirements",
+  "ui_ux_considerations": "Content about interface patterns and design requirements",
+  "technology_integration": "Content about system requirements and technical constraints",
+  "challenges_pain_points": "Content about industry problems and operational difficulties",
+  "best_practices": "Content about industry standards and proven approaches",
+  "uncategorized": "Content that doesn't fit into the above categories"
+}}
+```
+
+<Guidelines>
+- Place content in the most appropriate category
+- If content spans multiple categories, place it in the primary category and note cross-references
+- Ensure all content is preserved - nothing should be lost
+- Use clear, concise summaries for each category
+- If a category has no relevant content, use an empty string
+- Focus on information that directly informs UI design decisions
+</Guidelines>
+"""
+
+domain_knowledge_markdown_organization_prompt = """You are a domain knowledge documentation specialist. Your job is to organize categorized domain knowledge into well-structured markdown files for easy reference by UI/UX designers.
+
+<Categorized Domain Knowledge>
+{categorized_domain_knowledge}
+</Categorized Domain Knowledge>
+
+<Domain Context>
+Domain: {domain_name}
+Industry: {industry_type}
+UI Focus: {ui_focus_area}
+</Domain Context>
+
+<Markdown Organization Task>
+Create a comprehensive markdown document structure that organizes the domain knowledge for optimal UI design decision-making. The document should be:
+
+1. **Well-structured** with clear headings and logical flow
+2. **Designer-friendly** with information that directly informs UI decisions
+3. **Comprehensive** covering all aspects of the domain
+4. **Actionable** providing specific insights for UI/UX work
+5. **Referenced** with proper citations and sources
+
+<Output Format>
+Create a markdown document with the following structure:
+
+```markdown
+# Domain Knowledge Base: {domain_name}
+
+## Executive Summary
+Brief overview of the domain and key UI design implications
+
+## Industry Overview
+[Content from industry_overview category]
+
+## Stakeholders & User Personas
+[Content from stakeholders_user_personas category]
+
+## Critical Workflows & Processes
+[Content from workflows_processes category]
+
+## Regulatory & Compliance Requirements
+[Content from regulatory_compliance category]
+
+## UI/UX Design Considerations
+[Content from ui_ux_considerations category]
+
+## Technology & Integration Requirements
+[Content from technology_integration category]
+
+## Common Challenges & Pain Points
+[Content from challenges_pain_points category]
+
+## Best Practices & Recommendations
+[Content from best_practices category]
+
+## UI Design Implications Summary
+Key takeaways for UI/UX designers
+
+## Sources
+[All referenced sources with proper citations]
+```
+
+<Guidelines>
+- Use clear, actionable language accessible to UI/UX designers
+- Include specific examples and use cases where relevant
+- Highlight information that directly impacts UI design decisions
+- Maintain proper markdown formatting
+- Ensure all content is preserved and well-organized
+- Add cross-references between related sections
+- Include practical recommendations for UI implementation
+</Guidelines>
+"""
+
+domain_knowledge_file_naming_prompt = """You are a domain knowledge file organization specialist. Your job is to create appropriate file names and directory structures for domain knowledge markdown files.
+
+<Domain Information>
+Domain: {domain_name}
+Industry: {industry_type}
+UI Focus: {ui_focus_area}
+Date: {date}
+</Domain Information>
+
+<File Organization Task>
+Create a logical file naming convention and directory structure for storing domain knowledge markdown files. Consider:
+
+1. **Hierarchical organization** - Group related domains together
+2. **Clear naming** - File names should be descriptive and searchable
+3. **Version control** - Include date or version information
+4. **Scalability** - Structure should work for multiple domains
+5. **Accessibility** - Easy to find and reference
+
+<Output Format>
+Return a JSON object with the following structure:
+```json
+{{
+  "directory_structure": [
+    "domain_knowledge/",
+    "domain_knowledge/{industry_category}/",
+    "domain_knowledge/{industry_category}/{domain_name}/"
+  ],
+  "file_names": {{
+    "main_knowledge_base": "{domain_name}_knowledge_base_{date}.md",
+    "ui_design_implications": "{domain_name}_ui_implications_{date}.md",
+    "stakeholder_analysis": "{domain_name}_stakeholders_{date}.md",
+    "workflow_documentation": "{domain_name}_workflows_{date}.md",
+    "regulatory_requirements": "{domain_name}_regulatory_{date}.md"
+  }},
+  "index_file": "domain_knowledge/README.md",
+  "domain_index": "domain_knowledge/{industry_category}/README.md"
+}}
+```
+
+<Guidelines>
+- Use lowercase with underscores for file names
+- Include industry category in directory structure
+- Use descriptive names that clearly indicate content
+- Include date for version tracking
+- Create index files for easy navigation
+- Consider future expansion and maintenance
+</Guidelines>
+"""

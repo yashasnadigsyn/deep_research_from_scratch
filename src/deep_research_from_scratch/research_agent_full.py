@@ -1,15 +1,14 @@
 
 """
-Full Multi-Agent Research System
+Full Multi-Agent Domain Knowledge Research System
 
-This module integrates all components of the research system:
-- User clarification and scoping
-- Research brief generation  
-- Multi-agent research coordination
-- Final report generation
+This module integrates all components of the domain knowledge research system:
+- Automatic analysis and research brief generation  
+- Multi-agent domain knowledge research coordination
+- Final domain knowledge base generation
 
-The system orchestrates the complete research workflow from initial user
-input through final report delivery.
+The system orchestrates the complete domain knowledge research workflow from initial user
+input through final domain knowledge base delivery for UI design decision-making.
 """
 
 import logging
@@ -19,7 +18,7 @@ from langgraph.graph import StateGraph, START, END
 from deep_research_from_scratch.utils import get_today_str
 from deep_research_from_scratch.prompts import final_report_generation_prompt
 from deep_research_from_scratch.state_scope import AgentState, AgentInputState
-from deep_research_from_scratch.research_agent_scope import clarify_with_user, write_research_brief
+from deep_research_from_scratch.research_agent_scope import write_research_brief
 from deep_research_from_scratch.multi_agent_supervisor import supervisor_agent
 
 # Set up logger for this module
@@ -28,7 +27,7 @@ logger = logging.getLogger("deep_research.full_agent")
 # ===== Config =====
 
 from langchain.chat_models import init_chat_model
-writer_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0", max_tokens=32000)
+writer_model = init_chat_model(model="ollama:granite3.3:2b", max_tokens=32000)
 
 # ===== FINAL REPORT GENERATION =====
 
@@ -83,13 +82,12 @@ async def final_report_generation(state: AgentState):
 deep_researcher_builder = StateGraph(AgentState, input_schema=AgentInputState)
 
 # Add workflow nodes
-deep_researcher_builder.add_node("clarify_with_user", clarify_with_user)
 deep_researcher_builder.add_node("write_research_brief", write_research_brief)
 deep_researcher_builder.add_node("supervisor_subgraph", supervisor_agent)
 deep_researcher_builder.add_node("final_report_generation", final_report_generation)
 
 # Add workflow edges
-deep_researcher_builder.add_edge(START, "clarify_with_user")
+deep_researcher_builder.add_edge(START, "write_research_brief")
 deep_researcher_builder.add_edge("write_research_brief", "supervisor_subgraph")
 deep_researcher_builder.add_edge("supervisor_subgraph", "final_report_generation")
 deep_researcher_builder.add_edge("final_report_generation", END)

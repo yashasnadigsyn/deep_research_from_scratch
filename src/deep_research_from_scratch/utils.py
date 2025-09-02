@@ -43,7 +43,7 @@ def get_current_dir() -> Path:
 
 # ===== CONFIGURATION =====
 
-summarization_model = init_chat_model(model="ollama:qwen3:0.6b-q8_0")
+summarization_model = init_chat_model(model="ollama:granite3.3:2b")
 ddgs_client = DDGS()
 
 # ===== SEARCH FUNCTIONS =====
