@@ -7,26 +7,29 @@ The agent can perform comprehensive research on any topic using web search
 and multi-agent coordination.
 
 Usage:
+    # Interactive mode
+    python main.py
+    
+    # Command line mode with query
     python main.py "What are the best coffee shops in San Francisco?"
     python main.py "Compare OpenAI vs Anthropic AI approaches"
+    
+    # With requirements file
+    python main.py --requirements requirements.txt
+    python main.py --requirements requirements.pdf "Analyze these requirements"
+    python main.py -r requirements.txt "What are the key technical challenges?"
 """
 
 import asyncio
 import sys
 import logging
 import os
+import argparse
 from datetime import datetime
 from typing import Optional
-from rich.console import Console
-from rich.markdown import Markdown
-from rich.panel import Panel
-from rich.prompt import Prompt
 from langchain_core.messages import HumanMessage
 
 from deep_research_from_scratch.research_agent_full import agent
-
-# Initialize rich console for beautiful output
-console = Console()
 
 # Configure logging
 def setup_logging():
@@ -73,7 +76,7 @@ Features:
 - Comprehensive report generation
 - Ollama integration for local AI processing
 """
-    console.print(Panel(banner, title="🤖 Deep Research Agent", border_style="blue"))
+    print(banner)
 
 async def run_research(query: str) -> str:
     """
@@ -89,8 +92,8 @@ async def run_research(query: str) -> str:
     start_time = datetime.now()
     
     try:
-        console.print(f"\n🔍 Starting research on: [bold cyan]{query}[/bold cyan]")
-        console.print("⏳ This may take a few minutes...\n")
+        print(f"\nStarting research on: {query}")
+        print("This may take a few minutes...\n")
         
         logger.info("Invoking full research agent")
         # Run the full research agent
@@ -112,24 +115,24 @@ async def run_research(query: str) -> str:
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
         logger.error(f"Research failed after {duration:.2f} seconds: {str(e)}", exc_info=True)
-        console.print(f"[red]Error during research: {str(e)}[/red]")
+        print(f"Error during research: {str(e)}")
         return f"Error: {str(e)}"
 
 def display_report(report: str):
     """Display the research report in a formatted way."""
     if report.startswith("Error:"):
-        console.print(f"[red]{report}[/red]")
+        print(f"Error: {report}")
         return
         
-    console.print("\n" + "="*80)
-    console.print(Panel("📊 Research Report", style="bold green"))
-    console.print("="*80)
+    print("\n" + "="*80)
+    print("Research Report")
+    print("="*80)
     
-    # Display the markdown report
-    console.print(Markdown(report))
+    # Display the report (plain text)
+    print(report)
     
-    console.print("\n" + "="*80)
-    console.print("[green]✅ Research completed successfully![/green]")
+    print("\n" + "="*80)
+    print("Research completed successfully!")
 
 async def interactive_mode():
     """Run the agent in interactive mode."""
@@ -141,15 +144,15 @@ async def interactive_mode():
     while True:
         try:
             # Get user input
-            query = Prompt.ask("\n[bold blue]Enter your research question[/bold blue] (or 'quit' to exit)")
+            query = input("\nEnter your research question (or 'quit' to exit): ")
             
             if query.lower() in ['quit', 'exit', 'q']:
                 logger.info(f"Interactive session ended. Total queries processed: {session_count}")
-                console.print("[yellow]Goodbye! 👋[/yellow]")
+                print("Goodbye!")
                 break
                 
             if not query.strip():
-                console.print("[yellow]Please enter a valid research question.[/yellow]")
+                print("Please enter a valid research question.")
                 continue
             
             session_count += 1
@@ -161,19 +164,76 @@ async def interactive_mode():
             
         except KeyboardInterrupt:
             logger.info(f"Interactive session interrupted. Total queries processed: {session_count}")
-            console.print("\n[yellow]Goodbye! 👋[/yellow]")
+            print("\nGoodbye!")
             break
         except Exception as e:
             logger.error(f"Unexpected error in interactive mode: {str(e)}", exc_info=True)
-            console.print(f"[red]Unexpected error: {str(e)}[/red]")
+            print(f"Unexpected error: {str(e)}")
+
+def read_requirements_file(file_path: str) -> str:
+    """Read requirements from a text or PDF file."""
+    import os
+    from pathlib import Path
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Requirements file not found: {file_path}")
+    
+    file_ext = Path(file_path).suffix.lower()
+    
+    if file_ext == '.txt':
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    elif file_ext == '.pdf':
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(file_path)
+            text = ""
+            for page_num in range(doc.page_count):                                                                                                                                                                                                                                                                                                                                                                                                                              
+                page = doc[page_num]
+                text += page.get_text() + "\n"
+            doc.close()
+            return text
+        except ImportError:
+            raise ImportError("PyMuPDF is required to read PDF files. Install it with: pip install PyMuPDF")
+    else:
+        raise ValueError(f"Unsupported file format: {file_ext}. Supported formats: .txt, .pdf")
 
 async def main():
     """Main entry point."""
     logger.info("Deep Research Agent starting up")
     
-    if len(sys.argv) > 1:
+    parser = argparse.ArgumentParser(description="Deep Research Agent - Comprehensive research system")
+    parser.add_argument("query", nargs="*", help="Research question or topic")
+    parser.add_argument("--requirements", "-r", help="Path to requirements file (.txt or .pdf)")
+    parser.add_argument("--interactive", "-i", action="store_true", help="Run in interactive mode")
+    
+    args = parser.parse_args()
+    
+    if args.requirements:                                                                                                                                                                                                       
+        # Read requirements from file
+        logger.info(f"Reading requirements from file: {args.requirements}")
+        try:
+            requirements_content = read_requirements_file(args.requirements)
+            logger.info(f"Successfully read {len(requirements_content)} characters from requirements file")
+            
+            # Combine requirements with query if provided
+            if args.query:
+                query = f"Requirements from {args.requirements}:\n\n{requirements_content}\n\nResearch question: {' '.join(args.query)}"
+            else:
+                query = f"Please research and analyze the following requirements:\n\n{requirements_content}"
+            
+            print_banner()
+            report = await run_research(query)
+            display_report(report)
+            
+        except Exception as e:
+            logger.error(f"Error reading requirements file: {str(e)}", exc_info=True)
+            print(f"Error reading requirements file: {str(e)}")
+            sys.exit(1)
+            
+    elif args.query:
         # Command line mode - single query
-        query = " ".join(sys.argv[1:])
+        query = " ".join(args.query)
         logger.info(f"Running in command line mode with query: {query}")
         print_banner()
         
@@ -192,7 +252,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        console.print("\n[yellow]Goodbye! 👋[/yellow]")
+        print("\nGoodbye!")
     except Exception as e:
-        console.print(f"[red]Fatal error: {str(e)}[/red]")
+        print(f"Fatal error: {str(e)}")
         sys.exit(1)
