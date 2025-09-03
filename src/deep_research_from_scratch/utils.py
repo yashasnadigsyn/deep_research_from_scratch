@@ -127,17 +127,17 @@ def summarize_webpage_content(webpage_content: str) -> str:
     """
     logger.debug(f"Summarizing webpage content of length: {len(webpage_content)} characters")
     
+    # Prepare the prompt
+    prompt_content = summarize_webpage_prompt.format(
+        webpage_content=webpage_content, 
+        date=get_today_str()
+    )
+    
     try:
-        # Set up structured output model for summarization
+        # Try structured output first
+        logger.debug("Attempting structured output for summarization")
         structured_model = summarization_model.with_structured_output(Summary)
-
-        # Generate summary
-        summary = structured_model.invoke([
-            HumanMessage(content=summarize_webpage_prompt.format(
-                webpage_content=webpage_content, 
-                date=get_today_str()
-            ))
-        ])
+        summary = structured_model.invoke([HumanMessage(content=prompt_content)])
 
         # Format summary with clear structure
         formatted_summary = (
@@ -145,14 +145,49 @@ def summarize_webpage_content(webpage_content: str) -> str:
             f"<key_excerpts>\n{summary.key_excerpts}\n</key_excerpts>"
         )
 
-        logger.debug(f"Successfully summarized content. Summary length: {len(formatted_summary)} characters")
+        logger.debug(f"Successfully summarized content with structured output. Summary length: {len(formatted_summary)} characters")
         return formatted_summary
 
-    except Exception as e:
-        logger.error(f"Failed to summarize webpage: {str(e)}", exc_info=True)
-        fallback_content = webpage_content[:1000] + "..." if len(webpage_content) > 1000 else webpage_content
-        logger.debug(f"Using fallback content of length: {len(fallback_content)} characters")
-        return fallback_content
+    except Exception as structured_error:
+        logger.warning(f"Structured output failed for summarization: {str(structured_error)}")
+        logger.info("Attempting fallback text generation with manual JSON parsing")
+        
+        try:
+            # Fallback: Use regular text generation and parse manually
+            response = summarization_model.invoke([HumanMessage(content=prompt_content)])
+            raw_content = response.content.strip()
+            logger.debug(f"Raw summarization response: {raw_content[:500]}...")
+            
+            # Try to extract JSON from the response
+            import json
+            import re
+            
+            # Look for JSON in the response
+            json_match = re.search(r'\{[^{}]*"summary"[^{}]*"key_excerpts"[^{}]*\}', raw_content, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                parsed_json = json.loads(json_str)
+                summary_text = parsed_json.get("summary", "")
+                excerpts_text = parsed_json.get("key_excerpts", "")
+                formatted_summary = (
+                    f"<summary>\n{summary_text}\n</summary>\n\n"
+                    f"<key_excerpts>\n{excerpts_text}\n</key_excerpts>"
+                )
+            else:
+                # If no JSON found, use the entire response as the summary
+                formatted_summary = f"<summary>\n{raw_content}\n</summary>\n\n<key_excerpts>\nNo specific excerpts available\n</key_excerpts>"
+                
+            logger.info("Successfully summarized content with fallback parsing")
+            logger.debug(f"Fallback summary length: {len(formatted_summary)} characters")
+            return formatted_summary
+            
+        except Exception as fallback_error:
+            logger.error(f"Fallback parsing also failed for summarization: {str(fallback_error)}")
+            # Final fallback
+            fallback_content = webpage_content[:1000] + "..." if len(webpage_content) > 1000 else webpage_content
+            formatted_summary = f"<summary>\n{fallback_content}\n</summary>\n\n<key_excerpts>\nContent too long to extract specific excerpts\n</key_excerpts>"
+            logger.debug(f"Using final fallback content of length: {len(formatted_summary)} characters")
+            return formatted_summary
 
 def deduplicate_search_results(search_results: List[dict]) -> dict:
     """Deduplicate search results by URL to avoid processing duplicate content.

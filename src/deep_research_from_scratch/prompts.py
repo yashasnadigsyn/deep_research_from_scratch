@@ -64,7 +64,12 @@ The messages that have been exchanged so far between yourself and the user are:
 
 Today's date is {date}.
 
-You will return a single comprehensive UI/UX design research brief that will be used to guide the research.
+CRITICAL: You must return ONLY a valid JSON object with the exact structure:
+{{
+  "research_brief": "Your comprehensive UI/UX design research brief here"
+}}
+
+Do not include any additional text, explanations, or formatting outside the JSON object. The research_brief field should contain the complete research brief text.
 
 **AUTOMATIC ANALYSIS REQUIREMENTS:**
 You must automatically analyze the user's request and infer the necessary UI/UX design context without asking for clarification. Based on the user's input, you should:
