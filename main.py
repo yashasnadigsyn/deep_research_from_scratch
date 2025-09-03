@@ -64,16 +64,17 @@ logger = setup_logging()
 def print_banner():
     """Print the application banner."""
     banner = """
-# Deep Research Agent
+# UI/UX Design Research Agent
 
 A comprehensive research system that uses multi-agent coordination
-to perform deep research on any topic using web search and AI analysis.
+to perform deep UI/UX design pattern research for domain-specific interfaces.
 
 Features:
-- User clarification and scoping
+- UI/UX design research focus
 - Multi-agent research coordination  
 - Web search with DDGS (Dux Distributed Global Search)
-- Comprehensive report generation
+- Comprehensive UI/UX design knowledge base generation
+- Automatic markdown file saving
 - Ollama integration for local AI processing
 """
     print(banner)
@@ -118,21 +119,60 @@ async def run_research(query: str) -> str:
         print(f"Error during research: {str(e)}")
         return f"Error: {str(e)}"
 
-def display_report(report: str):
-    """Display the research report in a formatted way."""
+def save_markdown_report(report: str, query: str) -> str:
+    """Save the research report as a markdown file.
+    
+    Args:
+        report: The research report content
+        query: The original query for filename generation
+        
+    Returns:
+        The path to the saved file
+    """
+    # Create domain_knowledge directory if it doesn't exist
+    os.makedirs("domain_knowledge", exist_ok=True)
+    
+    # Generate filename from query (sanitize for filesystem)
+    import re
+    from datetime import datetime
+    
+    # Clean query for filename
+    clean_query = re.sub(r'[^\w\s-]', '', query.lower())
+    clean_query = re.sub(r'[-\s]+', '_', clean_query)
+    clean_query = clean_query[:50]  # Limit length
+    
+    # Add timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"domain_knowledge/{clean_query}_{timestamp}.md"
+    
+    # Save the report
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(report)
+    
+    logger.info(f"Research report saved to: {filename}")
+    return filename
+
+def display_report(report: str, query: str = ""):
+    """Display the research report in a formatted way and save it as markdown."""
     if report.startswith("Error:"):
         print(f"Error: {report}")
         return
         
     print("\n" + "="*80)
-    print("Research Report")
+    print("UI/UX Design Research Report")
     print("="*80)
     
     # Display the report (plain text)
     print(report)
     
+    # Save as markdown file
+    if query:
+        saved_path = save_markdown_report(report, query)
+        print(f"\n" + "="*80)
+        print(f"Report saved to: {saved_path}")
+    
     print("\n" + "="*80)
-    print("Research completed successfully!")
+    print("UI/UX Design Research completed successfully!")
 
 async def interactive_mode():
     """Run the agent in interactive mode."""
@@ -160,7 +200,7 @@ async def interactive_mode():
             
             # Run research
             report = await run_research(query)
-            display_report(report)
+            display_report(report, query)
             
         except KeyboardInterrupt:
             logger.info(f"Interactive session interrupted. Total queries processed: {session_count}")
@@ -224,7 +264,7 @@ async def main():
             
             print_banner()
             report = await run_research(query)
-            display_report(report)
+            display_report(report, query)
             
         except Exception as e:
             logger.error(f"Error reading requirements file: {str(e)}", exc_info=True)
@@ -238,7 +278,7 @@ async def main():
         print_banner()
         
         report = await run_research(query)
-        display_report(report)
+        display_report(report, query)
         
     else:
         # Interactive mode
