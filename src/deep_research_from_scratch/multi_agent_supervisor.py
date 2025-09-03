@@ -227,15 +227,30 @@ async def supervisor_tools(state: SupervisorState) -> Command[Literal["superviso
             logger.info(f"Launching {len(conduct_research_calls)} parallel research agents")
             
             # Launch parallel research agents
-            coros = [
-                researcher_agent.ainvoke({
-                    "researcher_messages": [
-                        HumanMessage(content=tool_call["args"]["research_topic"])
-                    ],
-                    "research_topic": tool_call["args"]["research_topic"]
-                }) 
-                for tool_call in conduct_research_calls
-            ]
+            coros = []
+            for tool_call in conduct_research_calls:
+                try:
+                    # Safely extract research topic from tool call args
+                    args = tool_call.get("args", {})
+                    research_topic = args.get("research_topic", "Unknown research topic")
+                    
+                    logger.debug(f"Tool call args: {args}")
+                    logger.debug(f"Research topic: {research_topic}")
+                    
+                    coros.append(
+                        researcher_agent.ainvoke({
+                            "researcher_messages": [
+                                HumanMessage(content=research_topic)
+                            ],
+                            "research_topic": research_topic
+                        })
+                    )
+                except Exception as e:
+                    logger.error(f"Error processing tool call {tool_call}: {str(e)}")
+                    # Create a fallback coroutine that returns an error result
+                    async def error_result():
+                        return {"compressed_research": f"Error processing research topic: {str(e)}", "raw_notes": []}
+                    coros.append(error_result())
 
             # Wait for all research to complete
             logger.debug("Waiting for parallel research agents to complete")
