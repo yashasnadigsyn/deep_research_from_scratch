@@ -43,7 +43,15 @@ def get_current_dir() -> Path:
 
 # ===== CONFIGURATION =====
 
-summarization_model = init_chat_model(model="ollama:granite3.3:2b")
+def get_ollama_model(temperature: float = 0.0, max_tokens: int = None):
+    """Get a configured Ollama model instance."""
+    kwargs = {"model": "ollama:granite3.3:2b", "temperature": temperature}
+    if max_tokens:
+        kwargs["max_tokens"] = max_tokens
+    return init_chat_model(**kwargs)
+
+# Pre-configured model instances
+summarization_model = get_ollama_model()
 ddgs_client = DDGS()
 
 # ===== SEARCH FUNCTIONS =====

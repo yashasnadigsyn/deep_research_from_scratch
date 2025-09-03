@@ -15,7 +15,7 @@ import logging
 from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, START, END
 
-from deep_research_from_scratch.utils import get_today_str
+from deep_research_from_scratch.utils import get_today_str, get_ollama_model
 from deep_research_from_scratch.prompts import final_report_generation_prompt
 from deep_research_from_scratch.state_scope import AgentState, AgentInputState
 from deep_research_from_scratch.research_agent_scope import write_research_brief
@@ -26,12 +26,9 @@ logger = logging.getLogger("deep_research.full_agent")
 
 # ===== Config =====
 
-from langchain.chat_models import init_chat_model
-writer_model = init_chat_model(model="ollama:granite3.3:2b", max_tokens=32000)
+writer_model = get_ollama_model(max_tokens=32000)
 
 # ===== FINAL REPORT GENERATION =====
-
-from deep_research_from_scratch.state_scope import AgentState
 
 async def final_report_generation(state: AgentState):
     """

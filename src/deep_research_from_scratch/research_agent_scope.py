@@ -10,28 +10,24 @@ and create comprehensive research briefs for domain knowledge aggregation.
 """
 
 import logging
-from datetime import datetime
 
-from langchain.chat_models import init_chat_model
+
 from langchain_core.messages import HumanMessage, AIMessage, get_buffer_string
 from langgraph.graph import StateGraph, START, END
 
 from deep_research_from_scratch.prompts import transform_messages_into_research_topic_prompt
 from deep_research_from_scratch.state_scope import AgentState, ResearchQuestion, AgentInputState
+from deep_research_from_scratch.utils import get_today_str, get_ollama_model
 
 # Set up logger for this module
 logger = logging.getLogger("deep_research.scope")
 
 # ===== UTILITY FUNCTIONS =====
 
-def get_today_str() -> str:
-    """Get current date in a human-readable format."""
-    return datetime.now().strftime("%a %b %-d, %Y")
-
 # ===== CONFIGURATION =====
 
 # Initialize model
-model = init_chat_model(model="ollama:granite3.3:2b", temperature=0.0)
+model = get_ollama_model(temperature=0.0)
 
 # ===== WORKFLOW NODES =====
 

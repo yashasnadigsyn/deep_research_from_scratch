@@ -11,10 +11,10 @@ from typing_extensions import Literal
 
 from langgraph.graph import StateGraph, START, END
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage, filter_messages
-from langchain.chat_models import init_chat_model
+
 
 from deep_research_from_scratch.state_research import ResearcherState, ResearcherOutputState
-from deep_research_from_scratch.utils import ddgs_search, get_today_str, think_tool
+from deep_research_from_scratch.utils import ddgs_search, get_today_str, think_tool, get_ollama_model
 from deep_research_from_scratch.prompts import research_agent_prompt, compress_research_system_prompt, compress_research_human_message
 
 # Set up logger for this module
@@ -27,10 +27,10 @@ tools = [ddgs_search, think_tool]
 tools_by_name = {tool.name: tool for tool in tools}
 
 # Initialize models
-model = init_chat_model(model="ollama:granite3.3:2b")
+model = get_ollama_model()
 model_with_tools = model.bind_tools(tools)
-summarization_model = init_chat_model(model="ollama:granite3.3:2b")
-compress_model = init_chat_model(model="ollama:granite3.3:2b", max_tokens=32000)
+summarization_model = get_ollama_model()
+compress_model = get_ollama_model(max_tokens=32000)
 
 # ===== AGENT NODES =====
 

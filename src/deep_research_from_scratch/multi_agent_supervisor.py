@@ -15,7 +15,7 @@ import logging
 
 from typing_extensions import Literal
 
-from langchain.chat_models import init_chat_model
+
 from langchain_core.messages import (
     HumanMessage, 
     BaseMessage, 
@@ -33,7 +33,7 @@ from deep_research_from_scratch.state_multi_agent_supervisor import (
     ConductResearch, 
     ResearchComplete
 )
-from deep_research_from_scratch.utils import get_today_str, think_tool
+from deep_research_from_scratch.utils import get_today_str, think_tool, get_ollama_model
 
 # Set up logger for this module
 logger = logging.getLogger("deep_research.supervisor")
@@ -72,7 +72,7 @@ except ImportError:
 # ===== CONFIGURATION =====
 
 supervisor_tools = [ConductResearch, ResearchComplete, think_tool]
-supervisor_model = init_chat_model(model="ollama:granite3.3:2b")
+supervisor_model = get_ollama_model()
 supervisor_model_with_tools = supervisor_model.bind_tools(supervisor_tools)
 
 # System constants

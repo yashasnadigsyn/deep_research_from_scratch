@@ -26,7 +26,7 @@ import logging
 import os
 import argparse
 from datetime import datetime
-from typing import Optional
+
 from langchain_core.messages import HumanMessage
 
 from deep_research_from_scratch.research_agent_full import agent
