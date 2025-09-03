@@ -58,7 +58,7 @@ ddgs_client = DDGS()
 
 def ddgs_search_multiple(
     search_queries: List[str], 
-    max_results: int = 3, 
+    max_results: int = 8, 
     region: str = "us-en",
     safesearch: str = "moderate",
 ) -> List[dict]:
@@ -226,7 +226,7 @@ def format_search_output(summarized_results: dict) -> str:
 @tool(parse_docstring=True)
 def ddgs_search(
     query: str,
-    max_results: Annotated[int, InjectedToolArg] = 3,
+    max_results: Annotated[int, InjectedToolArg] = 8,
     region: Annotated[str, InjectedToolArg] = "us-en",
     safesearch: Annotated[str, InjectedToolArg] = "moderate",
 ) -> str:
